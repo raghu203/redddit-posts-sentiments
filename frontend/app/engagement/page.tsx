@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BarChart2, TrendingUp, TrendingDown, Activity, Users } from 'lucide-react';
 import StatCard from '@/components/ui/StatCard';
 import SectionCard from '@/components/ui/SectionCard';
@@ -9,8 +9,7 @@ import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
     PieChart, Pie, Cell, Legend,
 } from 'recharts';
-
-const API = 'http://localhost:5000';
+import { fetchSubreddits, startAutoRefresh } from '@/src/services/api';
 
 const subColors: Record<string, string> = {
     'r/technology': '#5b5ef4', 'r/science': '#0ea5e9', 'r/space': '#8b5cf6',
@@ -27,19 +26,32 @@ export default function SubredditComparisonPage() {
     const [selectedSub, setSelectedSub] = useState<string | null>(null);
     const [subredditSentiment, setSubredditSentiment] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    useEffect(() => {
-        fetch(`${API}/api/subreddits`)
-            .then(r => r.json())
-            .then(data => setSubredditSentiment(
+    const loadData = useCallback(async () => {
+        try {
+            const data = await fetchSubreddits();
+            setSubredditSentiment(
                 (data.subreddits || []).map((s: any) => ({
                     name: s.name, positive: s.positive_pct, neutral: s.neutral_pct,
                     negative: s.negative_pct, total: s.total, avgScore: s.avg_score,
                 }))
-            ))
-            .catch(() => { })
-            .finally(() => setLoading(false));
+            );
+            setLastUpdated(new Date());
+        } catch {
+            // keep existing state
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(loadData, 30000);
+        return stop;
+    }, [loadData]);
 
     const filtered = selectedSub ? subredditSentiment.filter(s => s.name === selectedSub) : subredditSentiment;
     const mostPositive = subredditSentiment.length ? subredditSentiment.reduce((a, b) => a.avgScore > b.avgScore ? a : b) : null;
@@ -137,7 +149,7 @@ export default function SubredditComparisonPage() {
                             </PieChart>
                         </ResponsiveContainer>
                         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                            <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--foreground)' }}>46%</div>
+                            <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--foreground)' }}>{Math.round(totalPos / subredditSentiment.length || 0)}%</div>
                             <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>POSITIVE</div>
                         </div>
                     </div>

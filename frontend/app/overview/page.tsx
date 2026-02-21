@@ -6,18 +6,14 @@ import SectionCard from '@/components/ui/SectionCard';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
-import { useState, useEffect } from 'react';
-
-const API = 'http://localhost:5000';
+import { useState, useEffect, useCallback } from 'react';
+import { fetchOverview, fetchTrends, fetchSubreddits, startAutoRefresh } from '@/src/services/api';
 
 const COLORS = { Positive: '#22c55e', Neutral: '#94a3b8', Negative: '#ef4444' };
 
-const trendingTopics = [
-    { word: 'AI', size: 32, color: '#1e293b' }, { word: 'SpaceX', size: 28, color: '#1e293b' },
-    { word: 'OpenAI', size: 22, color: '#5b5ef4' }, { word: 'Inflation', size: 20, color: '#ef4444' },
-    { word: 'Climate', size: 18, color: '#475569' }, { word: 'Python', size: 16, color: '#475569' },
-    { word: 'Research', size: 20, color: '#1e293b' }, { word: 'Breakthrough', size: 17, color: '#16a34a' },
-];
+// Dynamic word sizes for cloud display
+const WORD_SIZES = [32, 28, 22, 20, 18, 16, 20, 17];
+const WORD_COLORS = ['#1e293b', '#1e293b', '#5b5ef4', '#ef4444', '#475569', '#475569', '#1e293b', '#16a34a'];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload?.length) {
@@ -35,28 +31,55 @@ export default function OverviewPage() {
     const [chartView, setChartView] = useState<'Daily' | 'Weekly'>('Daily');
     const [overview, setOverview] = useState<any>(null);
     const [trendData, setTrendData] = useState<any[]>([]);
+    const [trendingTopics, setTrendingTopics] = useState<{ word: string; size: number; color: string }[]>([]);
     const [loading, setLoading] = useState(true);
-    const [startDate, setStartDate] = useState('2024-01-01');
-    const [endDate, setEndDate] = useState('2024-01-15');
+    const [error, setError] = useState<string | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [startDate, setStartDate] = useState(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-    useEffect(() => {
-        const params = new URLSearchParams();
-        if (startDate) params.append('start_date', startDate);
-        if (endDate) params.append('end_date', endDate);
-
-        setLoading(true);
-        Promise.all([
-            fetch(`${API}/api/overview?${params}`).then(r => r.json()),
-            fetch(`${API}/api/trends?${params}`).then(r => r.json()),
-        ]).then(([ov, tr]) => {
+    const loadData = useCallback(async () => {
+        setError(null);
+        try {
+            const [ov, tr, subs] = await Promise.all([
+                fetchOverview(startDate, endDate),
+                fetchTrends(startDate, endDate),
+                fetchSubreddits(),
+            ]);
             setOverview(ov);
             setTrendData((tr.trends || []).map((t: any) => ({ date: t.date, posts: t.total })));
-        }).catch(() => {
-            // Fallback if backend not reachable
-            setOverview({ total_comments: 30, total_subreddits: 5, avg_sentiment_score: 0.18, sentiment_counts: { Positive: 14, Neutral: 9, Negative: 7 }, most_active_subreddit: 'r/space', most_positive_subreddit: 'r/science', most_negative_subreddit: 'r/worldnews' });
-            setTrendData([{ date: 'Jan 02', posts: 2 }, { date: 'Jan 03', posts: 4 }, { date: 'Jan 04', posts: 3 }]);
-        }).finally(() => setLoading(false));
+            // Build trending topics from real subreddit names
+            const subNames: string[] = (subs.subreddits || []).map((s: any) =>
+                s.name.replace(/^r\//, '')
+            );
+            setTrendingTopics(
+                subNames.slice(0, 8).map((word, i) => ({
+                    word,
+                    size: WORD_SIZES[i] || 16,
+                    color: WORD_COLORS[i] || '#475569',
+                }))
+            );
+            setLastUpdated(new Date());
+        } catch (e: any) {
+            setError('Could not reach backend. Showing cached data.');
+            if (!overview) {
+                setOverview({ total_comments: 0, total_subreddits: 0, avg_sentiment_score: 0, sentiment_counts: { Positive: 0, Neutral: 0, Negative: 0 }, most_active_subreddit: '—', most_positive_subreddit: '—', most_negative_subreddit: '—' });
+            }
+        } finally {
+            setLoading(false);
+        }
     }, [startDate, endDate]);
+
+    useEffect(() => {
+        setLoading(true);
+        loadData();
+    }, [loadData]);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(loadData, 30000);
+        return stop;
+    }, [loadData]);
 
     const sentimentData = overview ? [
         { name: 'Positive', value: overview.sentiment_counts.Positive, color: COLORS.Positive },

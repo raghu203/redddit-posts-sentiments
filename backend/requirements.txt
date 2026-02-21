@@ -3,3 +3,6 @@ flask-cors
 pandas
 vaderSentiment
 textblob
+praw
+apscheduler
+python-dotenv

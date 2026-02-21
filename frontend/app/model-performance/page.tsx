@@ -140,7 +140,7 @@ export default function SettingsPage() {
                         { label: 'Project', value: 'Reddit Sentiment Analysis Dashboard' },
                         { label: 'Purpose', value: 'Analyze public opinion on Reddit using NLP' },
                         { label: 'Sentiment Model', value: 'VADER / TextBlob / Pre-trained' },
-                        { label: 'Data Source', value: 'Reddit API (PRAW) / CSV Dataset' },
+                        { label: 'Data Source', value: 'Live Reddit API (PRAW)' },
                         { label: 'Frontend', value: 'Next.js, React, Recharts, TypeScript' },
                         { label: 'Backend', value: 'Python, Pandas, NLTK' },
                         { label: 'Preprocessing', value: 'URL removal, lowercase, stopwords, punctuation' },

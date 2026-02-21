@@ -1,71 +1,76 @@
 # Reddit Sentiment Analysis — Python Backend 🐍
 
-This is the backend server for the Reddit Alytics dashboard. It handles data cleaning, sentiment analysis using VADER, and serves the results via a Flask REST API.
-
-## 🛠 Project Workflow
-
-The backend operates in three distinct stages:
-
-1.  **Data Extraction & Cleaning (`clean.py`)**:
-    *   Takes raw Reddit data (CSV).
-    *   Removes URLs, special characters, and "noise" from the text.
-    *   Standardizes text for the NLP model.
-2.  **Sentiment Processing (`analyze.py`)**:
-    *   Applies the **VADER** model to the cleaned text.
-    *   Generates `compound`, `pos`, `neu`, and `neg` scores.
-    *   Categorizes comments into Positive, Neutral, or Negative labels.
-    *   Saves the results to `analyzed_output.csv`.
-3.  **API Delivery (`app.py`)**:
-    *   Initializes a Flask server.
-    *   Provides endpoints for the dashboard to fetch KPIs, trends, and specific comment data.
-    *   Includes a **Live Text Analyzer** endpoint for real-time custom analysis.
+Real-time backend for the RedditAlytics dashboard. Uses **APScheduler** to poll Reddit every 1 minute, analyzes posts with **VADER**, and persists results in **SQLite** — all without a single CSV file.
 
 ---
 
-## 🚀 How to Run
+## ⚙️ Architecture
+
+```
+Reddit API (PRAW)
+      ↓  [every 1 min]
+   scheduler.py  →  VADER Analysis  →  sqlite3 (reddit.db)
+                                              ↓
+                                       Flask REST API
+                                              ↓
+                                    Next.js Frontend (30s refresh)
+```
+
+**Two modes:**
+- 🟢 **LIVE**: Polls Reddit API using PRAW credentials (set in `.env`)
+- 🔄 **SIMULATION**: Generates synthetic posts if no credentials found — dashboard stays active
+
+---
+
+## 🚀 Quick Start
 
 ### 1. Install Dependencies
-Ensure you have Python 3.8+ installed.
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Process Data (One-time or when CSV changes)
-Run the analysis pipeline to generate the `analyzed_output.csv` used by the dashboard:
+### 2. Configure Reddit API (optional for Live Mode)
 ```bash
-python analyze.py
+cp .env.example .env
+# Edit .env with your Reddit API credentials
 ```
 
+> [!NOTE]
+> Without credentials the backend runs in Simulation Mode and generates realistic data automatically. No credentials are required to demo the dashboard.
+
 ### 3. Start the Server
-Run the Flask API:
 ```bash
 python app.py
 ```
-*   **Base URL**: `http://localhost:5000`
+- API: `http://localhost:5000`
+- The scheduler starts automatically on boot.
 
 ---
 
 ## 📡 API Endpoints
 
-### Data Discovery
+### Core
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/overview` | High-level KPI statistics (Total count, Avg score). |
-| `GET` | `/api/sentiment` | Full distribution data for pie and bar charts. |
-| `GET` | `/api/subreddits` | Sentiment breakdown grouped by subreddit. |
-| `GET` | `/api/trends` | Sentiment scores grouped by date for time-series charts. |
-| `GET` | `/api/comments` | Paginated and searchable list of all comments. |
+| `GET` | `/posts` | All stored posts (raw) |
+| `GET` | `/stats` | Aggregate sentiment stats |
+| `GET` | `/api/status` | Live sync health (used by header badge) |
 
-### Real-time Analysis
+### Dashboard Pages
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/analyze-text` | Analyzes a block of text split by newlines into segments. |
-| `POST` | `/api/analyze-url` | Fetches and analyzes live Reddit thread data (requires PRAW). |
+| `GET` | `/api/overview` | KPI stats (total, avg score, sentiment counts) |
+| `GET` | `/api/sentiment` | Sentiment distribution |
+| `GET` | `/api/subreddits` | Breakdown by subreddit |
+| `GET` | `/api/trends` | Daily sentiment over time |
+| `GET` | `/api/comments` | Paginated post list |
+| `POST` | `/api/analyze-text` | Instant text sentiment analysis |
 
 ---
 
-## 🧪 Technology Stack
-*   **Flask**: REST API framework.
-*   **Pandas**: Data manipulation and CSV processing.
-*   **VADER (NLTK)**: Rule-based sentiment analysis optimized for social media.
-*   **Flash-CORS**: Handles Cross-Origin Resource Sharing for the Next.js frontend.
+## 🧪 Tech Stack
+- **Flask** + **Flask-CORS** — REST API
+- **APScheduler** — 1-minute background polling
+- **PRAW** — Reddit API client
+- **VADER** — Sentiment analysis for social media text
+- **SQLite** — Lightweight, zero-config persistence

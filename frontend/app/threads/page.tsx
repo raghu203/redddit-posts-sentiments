@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowUp, MessageSquare, Share2, Bookmark, TrendingUp } from 'lucide-react';
-
-const API = 'http://localhost:5000';
+import { ArrowUp, MessageSquare, Bookmark, TrendingUp } from 'lucide-react';
+import { API_BASE, startAutoRefresh } from '@/src/services/api';
 
 const sentimentStyle = (s: string) => {
     if (s === 'Positive') return { color: '#16a34a', bg: '#dcfce7' };
@@ -26,14 +25,14 @@ export default function ThreadsPage() {
         try {
             const params = new URLSearchParams({ sort, per_page: '20' });
             if (activeFilter !== 'All') params.append('subreddit', activeFilter);
-            const res = await fetch(`${API}/api/threads?${params}`);
+            const res = await fetch(`${API_BASE}/api/threads?${params}`);
             const data = await res.json();
             setThreads(data.threads || []);
             setTotal(data.total || 0);
 
             // Populate subreddit filter list once
             if (subreddits.length <= 1) {
-                const subRes = await fetch(`${API}/api/subreddits`);
+                const subRes = await fetch(`${API_BASE}/api/subreddits`);
                 const subData = await subRes.json();
                 setSubreddits(['All', ...(subData.subreddits || []).map((s: any) => s.name)]);
             }
@@ -45,6 +44,12 @@ export default function ThreadsPage() {
     }, [sort, activeFilter]);
 
     useEffect(() => { fetchThreads(); }, [fetchThreads]);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(fetchThreads, 30000);
+        return stop;
+    }, [fetchThreads]);
 
     return (
         <div style={{ padding: '24px 28px', minHeight: '100vh', maxWidth: '900px', margin: '0 auto' }}>

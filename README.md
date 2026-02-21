@@ -8,11 +8,11 @@ RedditAlytics is an end-to-end data analysis platform designed to track, clean, 
 
 ```mermaid
 graph LR
-    A[Reddit Data .csv] --> B(Python Backend)
-    B --> C{NLP Engine}
+    A[Reddit API] --> B(Python Backend)
+    B --> C{APScheduler}
     C --> D[VADER Sentiment]
-    C --> E[Emotion Lexicon]
-    B --> F[Flask REST API]
+    D --> E[SQLite Database]
+    E --> F[Flask REST API]
     F --> G(Next.js Dashboard)
     G --> H[Interactive Visualization]
     I[Direct Text Input] --> F
@@ -27,7 +27,7 @@ graph LR
 *   **Temporal Trend Tracking**: See how public opinion shifts day-by-day.
 *   **Live Text Analyzer**: Paste any block of text or comment thread for instant segment-based analysis.
 *   **Subreddit Comparison**: Benchmark different communities against each other for toxicity or positivity.
-*   **Data Export**: Integrated export tools for CSV data sharing.
+*   **Data Persistence**: Real-time storage in SQLite for historical benchmarking and analysis.
 
 ---
 
@@ -47,8 +47,7 @@ Ensure you have **Python 3.8+** and **Node.js 18+** installed.
 ```bash
 cd backend
 pip install -r requirements.txt
-python analyze.py    # Process the dataset
-python app.py        # Start the API server (Port 5000)
+python app.py        # Start the API server & Background Sync (Port 5000)
 ```
 
 ### 3. Run the Frontend

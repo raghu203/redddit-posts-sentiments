@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Download, FileText, FileJson, FileImage, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
-
-const API = 'http://localhost:5000';
+import { API_BASE, fetchComments, startAutoRefresh } from '@/src/services/api';
 
 const sentimentStyle = (s: string) =>
     s === 'Positive' ? { c: '#16a34a', bg: '#dcfce7' }
@@ -16,22 +15,28 @@ export default function ExportPage() {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetch(`${API}/api/comments?per_page=5&sort_by=upvotes&sort_dir=desc`)
-            .then(r => r.json())
-            .then(data => {
-                setPreview(data.comments || []);
-                setTotal(data.total || 0);
-            })
-            .catch(() => { })
-            .finally(() => setLoading(false));
+    const loadPreview = useCallback(async () => {
+        try {
+            const data = await fetchComments({ perPage: 5, sortBy: 'upvotes', sortDir: 'desc' });
+            setPreview(data.comments || []);
+            setTotal(data.total || 0);
+        } catch { }
+        finally { setLoading(false); }
     }, []);
+
+    useEffect(() => { loadPreview(); }, [loadPreview]);
+
+    // Auto-refresh preview every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(loadPreview, 30000);
+        return stop;
+    }, [loadPreview]);
 
     const handleExport = async (format: string) => {
         if (format === 'pdf') return;
         setExporting(format);
         try {
-            const res = await fetch(`${API}/api/comments?per_page=1000&sort_by=upvotes&sort_dir=desc`);
+            const res = await fetch(`${API_BASE}/api/comments?per_page=1000&sort_by=upvotes&sort_dir=desc`);
             const data = await res.json();
             const rows: any[] = data.comments || [];
 
@@ -56,10 +61,14 @@ export default function ExportPage() {
 
     return (
         <div style={{ padding: '24px 28px', minHeight: '100vh' }}>
-            {/* Header */}
-            <div style={{ marginBottom: '24px' }}>
-                <h1 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--foreground)' }}>Export Data</h1>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>Download your sentiment analysis results from the live backend</p>
+            <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                    <span>Report Center</span><span>›</span><span>Export Insights</span>
+                </div>
+                <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--foreground)' }}>Data Export & Insights</h1>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Download analyzed datasets directly from the Live Reddit API
+                </p>
             </div>
 
             {/* Export Format Cards */}

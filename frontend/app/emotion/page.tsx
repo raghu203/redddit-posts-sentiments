@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MoreHorizontal, Search, SlidersHorizontal } from 'lucide-react';
 import StatCard from '@/components/ui/StatCard';
 import SectionCard from '@/components/ui/SectionCard';
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
 } from 'recharts';
+import { fetchEmotions, startAutoRefresh } from '@/src/services/api';
 
-const API = 'http://localhost:5000';
 const ALL_EMOTIONS = ['Joy', 'Anger', 'Fear', 'Sadness', 'Surprise', 'Neutral'];
 
 // Map emotion value (0–1) to a color intensity
@@ -51,17 +51,26 @@ export default function EmotionPage() {
     const [outliers, setOutliers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetch(`${API}/api/emotions`)
-            .then(r => r.json())
-            .then(data => {
-                setRadarData(data.radar || []);
-                setHeatmap(data.heatmap || {});
-                setOutliers(data.outliers || []);
-            })
-            .catch(() => { })
-            .finally(() => setLoading(false));
+    const loadData = useCallback(async () => {
+        try {
+            const data = await fetchEmotions();
+            setRadarData(data.radar || []);
+            setHeatmap(data.heatmap || {});
+            setOutliers(data.outliers || []);
+        } catch {
+            // keep existing state
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(loadData, 30000);
+        return stop;
+    }, [loadData]);
 
     const subreddits = Object.keys(heatmap);
     const dominantEmotion = radarData.length

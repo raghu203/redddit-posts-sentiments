@@ -1,42 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Calendar, Download, Plus, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Calendar, Download, Plus } from 'lucide-react';
 import SectionCard from '@/components/ui/SectionCard';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar,
 } from 'recharts';
-
-const API = 'http://localhost:5000';
-
-const timelineEvents = [
-    { date: 'Jan 02, 2024', title: 'Data Collection Start', desc: 'Began collecting sentiment data across multiple subreddits.', tags: ['Start'], active: true },
-    { date: 'Jan 05, 2024', title: 'Positive Sentiment Peak', desc: 'Notable spike in positive comments, driven by r/space posts.', tags: ['r/space'] },
-    { date: 'Jan 08, 2024', title: 'Negative Trend Observed', desc: 'Increased negativity in r/worldnews and r/technology threads.', tags: ['r/worldnews', 'r/technology'] },
-    { date: 'Jan 12, 2024', title: 'Neutral Plateau', desc: 'Neutral comments dominate across all subreddits.', tags: [] },
-];
+import { fetchTrends, startAutoRefresh } from '@/src/services/api';
 
 export default function TrendsPage() {
     const [view, setView] = useState<'Daily' | 'Weekly' | 'Monthly'>('Daily');
     const [trendData, setTrendData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    useEffect(() => {
-        fetch(`${API}/api/trends`)
-            .then(r => r.json())
-            .then(data => {
-                const raw = data.trends || [];
-                setTrendData(raw.map((t: any) => ({
-                    date: t.date,
-                    positive: t.positive,
-                    neutral: t.neutral,
-                    negative: t.negative,
-                    total: t.total,
-                })));
-            })
-            .catch(() => { })
-            .finally(() => setLoading(false));
+    const loadData = useCallback(async () => {
+        try {
+            const data = await fetchTrends();
+            const raw = data.trends || [];
+            setTrendData(raw.map((t: any) => ({
+                date: t.date,
+                positive: t.positive,
+                neutral: t.neutral,
+                negative: t.negative,
+                total: t.total,
+            })));
+            setLastUpdated(new Date());
+        } catch {
+            // keep existing state on error
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(loadData, 30000);
+        return stop;
+    }, [loadData]);
 
     // Compute stat cards from actual data
     const peakDay = trendData.reduce((best, d) => d.total > (best?.total || 0) ? d : best, null as any);
@@ -44,6 +47,26 @@ export default function TrendsPage() {
         ? trendData.reduce((s, d) => s + (d.positive - d.negative), 0) / trendData.length
         : 0;
     const dominantSentiment = avgScore > 0.3 ? 'Positive' : avgScore < -0.3 ? 'Negative' : 'Mixed/Neutral';
+
+    // Derive dynamic timeline events from real trend data
+    const timelineEvents = (() => {
+        if (trendData.length === 0) return [];
+        const first = trendData[0];
+        const peakEntry = trendData.reduce((best, d) => d.positive > (best?.positive || 0) ? d : best, null as any);
+        const negEntry = trendData.reduce((worst, d) => d.negative > (worst?.negative || 0) ? d : worst, null as any);
+        const events: any[] = [];
+        events.push({ date: first.date, title: 'Data Collection Start', desc: `Tracking began with ${first.total} comments on the first day.`, tags: ['Start'], active: true });
+        if (peakEntry && peakEntry.date !== first.date) {
+            events.push({ date: peakEntry.date, title: 'Positive Sentiment Peak', desc: `${peakEntry.positive} positive comments — highest observed day.`, tags: ['Peak'], active: false });
+        }
+        if (negEntry && negEntry.date !== first.date) {
+            events.push({ date: negEntry.date, title: 'Negative Trend Observed', desc: `${negEntry.negative} negative comments detected on this date.`, tags: ['Negative'], active: false });
+        }
+        if (trendData.length > 1) {
+            events.push({ date: trendData.at(-1)?.date, title: 'Latest Data Point', desc: `Most recent entry: ${trendData.at(-1)?.total || 0} comments analyzed.`, tags: [], active: false });
+        }
+        return events;
+    })();
 
     const statCards = [
         { label: 'DOMINANT SENTIMENT', value: dominantSentiment, sub: `Avg net score: ${avgScore.toFixed(2)}`, badge: avgScore > 0 ? 'Positive' : 'Negative', badgeColor: avgScore > 0 ? '#16a34a' : '#dc2626', badgeBg: avgScore > 0 ? '#dcfce7' : '#fee2e2', extra: avgScore > 0 ? '↑' : '↓' },
@@ -181,7 +204,7 @@ export default function TrendsPage() {
                                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{e.desc}</p>
                                 {e.tags.length > 0 && (
                                     <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                                        {e.tags.map(t => <span key={t} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#f1f5f9', color: 'var(--text-secondary)', fontWeight: '500' }}>{t}</span>)}
+                                        {e.tags.map((t: string) => <span key={t} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#f1f5f9', color: 'var(--text-secondary)', fontWeight: '500' }}>{t}</span>)}
                                     </div>
                                 )}
                             </div>

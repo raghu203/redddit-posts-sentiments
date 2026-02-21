@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Download, RefreshCw } from 'lucide-react';
-
-const API = 'http://localhost:5000';
+import { API_BASE, startAutoRefresh } from '@/src/services/api';
 
 const sentimentColors: Record<string, { color: string; bg: string }> = {
     Positive: { color: '#16a34a', bg: '#dcfce7' },
@@ -41,7 +40,7 @@ export default function CommentExplorerPage() {
             if (sentimentFilter !== 'All') params.append('sentiment', sentimentFilter);
             if (subFilter !== 'All') params.append('subreddit', subFilter);
 
-            const res = await fetch(`${API}/api/comments?${params}`);
+            const res = await fetch(`${API_BASE}/api/comments?${params}`);
             const json = await res.json();
             setData(json.comments || []);
             setTotal(json.total || 0);
@@ -50,7 +49,7 @@ export default function CommentExplorerPage() {
 
             // Build subreddit list once
             if (subreddits.length <= 1) {
-                const subRes = await fetch(`${API}/api/subreddits`);
+                const subRes = await fetch(`${API_BASE}/api/subreddits`);
                 const subJson = await subRes.json();
                 setSubreddits(['All', ...(subJson.subreddits || []).map((s: any) => s.name)]);
             }
@@ -63,6 +62,12 @@ export default function CommentExplorerPage() {
 
     useEffect(() => { fetchComments(); }, [fetchComments]);
 
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(fetchComments, 30000);
+        return stop;
+    }, [fetchComments]);
+
     const toggleSort = (col: 'score' | 'upvotes') => {
         if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
         else { setSortBy(col); setSortDir('desc'); }
@@ -73,7 +78,7 @@ export default function CommentExplorerPage() {
 
     const handleExportCSV = async () => {
         try {
-            const res = await fetch(`${API}/api/comments?per_page=1000`);
+            const res = await fetch(`${API_BASE}/api/comments?per_page=1000`);
             const json = await res.json();
             const header = 'Comment,Sentiment,Score,Subreddit,Author,Created,Upvotes\n';
             const rows = (json.comments || []).map((c: any) =>
@@ -91,8 +96,10 @@ export default function CommentExplorerPage() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
-                    <h1 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--foreground)' }}>Comment Explorer</h1>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>Browse, search, and filter individual Reddit comments with live sentiment scores</p>
+                    <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--foreground)' }}>Comment Explorer</h1>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        Search and filter individual Reddit reactions from the Live API
+                    </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={fetchComments} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>

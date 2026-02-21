@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Search, Loader2, ExternalLink, ThumbsUp, MessageSquare, AlertCircle, CheckCircle, MinusCircle, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const API = 'http://localhost:5000';
+import { API_BASE, analyzeText } from '@/src/services/api';
 
 const SENTIMENT_STYLE: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
     Positive: { color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={16} color="#16a34a" /> },
@@ -27,14 +27,9 @@ export default function TextAnalyzerPage() {
         setError(null);
 
         try {
-            const res = await fetch(`${API}/api/analyze-text`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text.trim() }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.ok) {
-                setError(data.error || 'An unexpected error occurred.');
+            const data = await analyzeText(text.trim());
+            if (!data || data.ok === false) {
+                setError(data?.error || 'An unexpected error occurred.');
             } else {
                 setResult(data);
             }

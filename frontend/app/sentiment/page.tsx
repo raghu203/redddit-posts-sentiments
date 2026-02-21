@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { BarChart2, Smile, Flame, ChevronDown, RefreshCw, ArrowUpRight, MessageCircle, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { BarChart2, Smile, Flame, RefreshCw, ArrowUpRight, Clock } from 'lucide-react';
 import StatCard from '@/components/ui/StatCard';
 import SectionCard from '@/components/ui/SectionCard';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { fetchSentiment, fetchSubreddits, fetchComments, startAutoRefresh } from '@/src/services/api';
 
-const API = 'http://localhost:5000';
-
-const SUBREDDITS = ['All', 'r/technology', 'r/science', 'r/space', 'r/worldnews', 'r/Python'];
 const TIMEFRAMES = ['Last 7 Days', 'Last 14 Days', 'Last 30 Days', 'Last 90 Days'];
 
 const subColors: Record<string, string> = {
@@ -23,31 +21,43 @@ export default function SentimentPage() {
     const [selectedTime, setSelectedTime] = useState('Last 30 Days');
     const [sentimentInfo, setSentimentInfo] = useState<any>(null);
     const [subreddits, setSubreddits] = useState<any[]>([]);
+    const [subredditOptions, setSubredditOptions] = useState<string[]>(['All']);
     const [samplePosts, setSamplePosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    const fetchData = async (sub?: string) => {
+    const fetchData = useCallback(async (sub?: string) => {
         setRefreshing(true);
         try {
-            const params = sub && sub !== 'All' ? `?subreddit=${encodeURIComponent(sub)}` : '';
+            const targetSub = sub ?? selectedSub;
             const [sentData, subData, commData] = await Promise.all([
-                fetch(`${API}/api/sentiment${params}`).then(r => r.json()),
-                fetch(`${API}/api/subreddits`).then(r => r.json()),
-                fetch(`${API}/api/comments?per_page=5${sub && sub !== 'All' ? `&subreddit=${encodeURIComponent(sub)}` : ''}`).then(r => r.json()),
+                fetchSentiment(targetSub),
+                fetchSubreddits(),
+                fetchComments({ perPage: 5, subreddit: targetSub }),
             ]);
             setSentimentInfo(sentData);
-            setSubreddits(subData.subreddits || []);
+            const subs = subData.subreddits || [];
+            setSubreddits(subs);
+            // Build dynamic subreddit list for the dropdown
+            setSubredditOptions(['All', ...subs.map((s: any) => s.name)]);
             setSamplePosts(commData.comments || []);
+            setLastUpdated(new Date());
         } catch {
-            // fallback handled by empty state
+            // fallback — keep existing state
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [selectedSub]);
 
     useEffect(() => { fetchData(); }, []);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(() => fetchData(selectedSub), 30000);
+        return stop;
+    }, [selectedSub]);
 
     const handleApplyFilters = () => fetchData(selectedSub);
     const handleRefresh = () => fetchData(selectedSub);
@@ -69,7 +79,7 @@ export default function SentimentPage() {
                         <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subreddit</div>
                         <select value={selectedSub} onChange={e => setSelectedSub(e.target.value)}
                             style={{ width: '100%', padding: '7px 10px', border: '1px solid var(--border)', borderRadius: '7px', fontSize: '13px', outline: 'none', background: 'white', cursor: 'pointer', fontFamily: 'inherit' }}>
-                            {SUBREDDITS.map(s => <option key={s}>{s}</option>)}
+                            {subredditOptions.map(s => <option key={s}>{s}</option>)}
                         </select>
                     </div>
                     <div style={{ flex: 1 }}>

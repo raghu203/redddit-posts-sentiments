@@ -62,6 +62,9 @@ export default function Sidebar() {
         );
     };
 
+    const isAuthPage = ['/login', '/forgot-password', '/contact-sales'].includes(pathname);
+    if (isAuthPage) return null;
+
     return (
         <aside style={{
             width: 'var(--sidebar-width)',

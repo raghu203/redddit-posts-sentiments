@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Download, CheckCircle } from 'lucide-react';
 import { FileText, MessageSquare, ThumbsUp, Shield } from 'lucide-react';
 import StatCard from '@/components/ui/StatCard';
 import SectionCard from '@/components/ui/SectionCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
-const API = 'http://localhost:5000';
+import { API_BASE, startAutoRefresh } from '@/src/services/api';
 
 // Static palette for subreddit bars
 const SUB_COLORS = ['#5b5ef4', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#dde4ff'];
@@ -18,12 +17,13 @@ export default function DataExplorationPage() {
     const [recentComments, setRecentComments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        Promise.all([
-            fetch(`${API}/api/overview`).then(r => r.json()),
-            fetch(`${API}/api/subreddits`).then(r => r.json()),
-            fetch(`${API}/api/comments?per_page=3&sort_by=upvotes&sort_dir=desc`).then(r => r.json()),
-        ]).then(([ov, subs, cmts]) => {
+    const loadData = useCallback(async () => {
+        try {
+            const [ov, subs, cmts] = await Promise.all([
+                fetch(`${API_BASE}/api/overview`).then(r => r.json()),
+                fetch(`${API_BASE}/api/subreddits`).then(r => r.json()),
+                fetch(`${API_BASE}/api/comments?per_page=3&sort_by=upvotes&sort_dir=desc`).then(r => r.json()),
+            ]);
             setOverview(ov);
             setSubredditData(
                 (subs.subreddits || []).slice(0, 5).map((s: any, i: number) => ({
@@ -31,8 +31,20 @@ export default function DataExplorationPage() {
                 }))
             );
             setRecentComments(cmts.comments || []);
-        }).catch(() => { }).finally(() => setLoading(false));
+        } catch {
+            // keep existing state
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    // Auto-refresh every 30 seconds
+    useEffect(() => {
+        const stop = startAutoRefresh(loadData, 30000);
+        return stop;
+    }, [loadData]);
 
     const total = overview?.total_comments || 0;
     const avgScore = overview?.avg_sentiment_score ?? 0;
@@ -68,13 +80,13 @@ export default function DataExplorationPage() {
                     </span>
                 </div>
                 <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Live stats from <code>analyzed_output.csv</code> via Flask backend
+                    Live stats from <code>Reddit API</code> via Flask backend
                 </p>
             </div>
 
             {/* Stats */}
             <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                <StatCard icon={<FileText size={18} color="#5b5ef4" />} value={loading ? '…' : total.toLocaleString()} label="Total Comments Analyzed" badge="From backend CSV" badgeColor="blue" />
+                <StatCard icon={<FileText size={18} color="#5b5ef4" />} value={loading ? '…' : total.toLocaleString()} label="Total Comments Analyzed" badge="Live Reddit API" badgeColor="blue" />
                 <StatCard icon={<MessageSquare size={18} color="#f59e0b" />} iconBg="#fef3c7" value={loading ? '…' : String(subredditCount)} label="Unique Subreddits" badge="Active communities" badgeColor="blue" />
                 <StatCard icon={<ThumbsUp size={18} color="#8b5cf6" />} iconBg="#ede9fe" value={loading ? '…' : avgScore.toFixed(3)} label="Avg Sentiment Score" badge={avgScore > 0 ? '↑ Positive skew' : '↓ Negative skew'} badgeColor={avgScore > 0 ? 'green' : 'red'} />
                 <StatCard icon={<Shield size={18} color="#16a34a" />} iconBg="#dcfce7" value={loading ? '…' : `${(100 - (dh.missing_author_pct || 0)).toFixed(1)}%`} label="Data Integrity" badge={`${dh.missing_author_pct ?? 0}% rows missing author`} badgeColor="gray" />
@@ -83,7 +95,7 @@ export default function DataExplorationPage() {
             {/* Middle Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '16px', marginBottom: '20px' }}>
                 {/* Dataset Info */}
-                <SectionCard title="Dataset Health Metrics" subtitle="Based on real analyzed_output.csv from your backend">
+                <SectionCard title="Dataset Health Metrics" subtitle="Based on live Reddit API data from your backend">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {dataHealth.map((d, i) => (
                             <div key={i}>
