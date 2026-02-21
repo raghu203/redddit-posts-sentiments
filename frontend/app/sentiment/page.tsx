@@ -53,11 +53,11 @@ export default function SentimentPage() {
 
     useEffect(() => { fetchData(); }, []);
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 10 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(() => fetchData(selectedSub), 30000);
+        const stop = startAutoRefresh(() => fetchData(), 10000);
         return stop;
-    }, [selectedSub]);
+    }, [fetchData]);
 
     const handleApplyFilters = () => fetchData(selectedSub);
     const handleRefresh = () => fetchData(selectedSub);

@@ -75,9 +75,9 @@ export default function OverviewPage() {
         loadData();
     }, [loadData]);
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 10 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(loadData, 30000);
+        const stop = startAutoRefresh(loadData, 10000);
         return stop;
     }, [loadData]);
 

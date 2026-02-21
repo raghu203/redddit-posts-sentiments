@@ -14,10 +14,12 @@ import {
     Search,
     List,
     Zap,
+    Upload,
 } from 'lucide-react';
 
 const mainNav = [
     { href: '/overview', label: 'Overview', icon: LayoutDashboard },
+    { href: '/upload-data', label: 'Upload Data', icon: Upload },
     { href: '/text-analyzer', label: 'Text Analyzer', icon: Zap },
     { href: '/data-exploration', label: 'Data Sources', icon: Database },
     { href: '/sentiment', label: 'Sentiment Analysis', icon: MessageSquare },

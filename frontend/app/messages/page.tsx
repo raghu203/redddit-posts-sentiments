@@ -27,7 +27,7 @@ export default function CommentExplorerPage() {
     const [loading, setLoading] = useState(true);
     const [counts, setCounts] = useState({ Positive: 0, Neutral: 0, Negative: 0, total: 0 });
 
-    const fetchComments = useCallback(async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
@@ -58,15 +58,15 @@ export default function CommentExplorerPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, sortBy, sortDir, search, sentimentFilter, subFilter]);
+    }, [page, sortBy, sortDir, search, sentimentFilter, subFilter, subreddits.length]);
 
-    useEffect(() => { fetchComments(); }, [fetchComments]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 10 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(fetchComments, 30000);
+        const stop = startAutoRefresh(() => fetchData(), 10000);
         return stop;
-    }, [fetchComments]);
+    }, [fetchData]);
 
     const toggleSort = (col: 'score' | 'upvotes') => {
         if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -102,7 +102,7 @@ export default function CommentExplorerPage() {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={fetchComments} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                    <button onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', background: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
                         <RefreshCw size={14} /> Refresh
                     </button>
                     <button onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', background: '#5b5ef4', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>

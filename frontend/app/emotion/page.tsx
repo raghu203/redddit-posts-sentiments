@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { MoreHorizontal, Search, SlidersHorizontal } from 'lucide-react';
+import { MoreHorizontal, Search, SlidersHorizontal, BarChart3, TrendingUp, PieChart as PieIcon } from 'lucide-react';
 import StatCard from '@/components/ui/StatCard';
 import SectionCard from '@/components/ui/SectionCard';
 import {
@@ -10,23 +10,6 @@ import {
 import { fetchEmotions, startAutoRefresh } from '@/src/services/api';
 
 const ALL_EMOTIONS = ['Joy', 'Anger', 'Fear', 'Sadness', 'Surprise', 'Neutral'];
-
-// Map emotion value (0–1) to a color intensity
-const emotionColor = (val: number, emotion: string): string => {
-    const palette: Record<string, [string, string]> = {
-        Joy: ['#fef9c3', '#eab308'],
-        Anger: ['#fee2e2', '#ef4444'],
-        Fear: ['#fef3c7', '#f59e0b'],
-        Sadness: ['#ede9fe', '#8b5cf6'],
-        Surprise: ['#fce7f3', '#ec4899'],
-        Neutral: ['#f1f5f9', '#64748b'],
-    };
-    const [low, high] = palette[emotion] || ['#f1f5f9', '#64748b'];
-    // lerp based on intensity
-    if (val <= 0) return low;
-    if (val >= 0.6) return high;
-    return low; // simplified — just use low/mid/high bucket
-};
 
 const intensityColor = (val: number, emotion: string) => {
     if (val === 0) return '#f1f5f9';
@@ -49,6 +32,7 @@ export default function EmotionPage() {
     const [radarData, setRadarData] = useState<any[]>([]);
     const [heatmap, setHeatmap] = useState<Record<string, Record<string, number>>>({});
     const [outliers, setOutliers] = useState<any[]>([]);
+    const [sentimentRates, setSentimentRates] = useState<any>({ Positive: 0, Neutral: 0, Negative: 0 });
     const [loading, setLoading] = useState(true);
 
     const loadData = useCallback(async () => {
@@ -57,6 +41,7 @@ export default function EmotionPage() {
             setRadarData(data.radar || []);
             setHeatmap(data.heatmap || {});
             setOutliers(data.outliers || []);
+            setSentimentRates(data.sentiment_rates || { Positive: 0, Neutral: 0, Negative: 0 });
         } catch {
             // keep existing state
         } finally {
@@ -66,9 +51,8 @@ export default function EmotionPage() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    // Auto-refresh every 30 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(loadData, 30000);
+        const stop = startAutoRefresh(loadData, 10000);
         return stop;
     }, [loadData]);
 
@@ -96,26 +80,71 @@ export default function EmotionPage() {
                 </div>
             </div>
 
-            {/* Stats */}
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                <StatCard icon={<span style={{ fontSize: '18px' }}>💬</span>} value={loading ? '…' : String(radarData.reduce((s, r) => s, 0) !== undefined ? 'Live' : '—')} label="Model" badge="Keyword Lexicon" badgeColor="blue" />
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px', flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>Dominant Emotion</div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--foreground)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {loading ? '…' : dominantEmotion.emotion} <span style={{ fontSize: '22px' }}>{emotionIcon[dominantEmotion.emotion] || '😐'}</span>
+            {/* Stats Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                {/* Card 1: Model Type */}
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <BarChart3 size={16} color="#3b82f6" />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Analysis Model</span>
                     </div>
-                    <div style={{ height: '3px', background: '#5b5ef4', borderRadius: '2px', width: `${(dominantEmotion.value * 100).toFixed(0)}%`, marginTop: '8px', minWidth: '10%' }} />
-                    <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '5px' }}>{(dominantEmotion.value * 100).toFixed(1)}% intensity across dataset</div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--foreground)' }}>Live Lexicon</div>
+                    <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '4px', fontWeight: '600' }}>Active Analysis</div>
                 </div>
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px', flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>Subreddits Tracked</div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--foreground)' }}>{loading ? '…' : subreddits.length}</div>
-                    <span style={{ fontSize: '11.5px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', background: '#dcfce7', color: '#16a34a', display: 'inline-block', marginTop: '6px' }}>All Active</span>
+
+                {/* Card 2: Dominant Emotion */}
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fef9c3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '16px' }}>{emotionIcon[dominantEmotion.emotion] || '😐'}</span>
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Dominant Tone</span>
+                    </div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--foreground)' }}>{loading ? '…' : dominantEmotion.emotion}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{(dominantEmotion.value * 100).toFixed(1)}% intensity</div>
                 </div>
-                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px', flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>Emotions Tracked</div>
-                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--foreground)' }}>6</div>
-                    <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '6px' }}>Joy · Anger · Fear · Sadness · Surprise · Neutral</div>
+
+                {/* Card 3: Sentiment Rate Breakdown (NEW) */}
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <PieIcon size={16} color="#22c55e" />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Sentiment Rates</span>
+                    </div>
+                    <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden', background: '#f1f5f9' }}>
+                        <div style={{ width: `${sentimentRates.Positive}%`, background: '#22c55e', transition: 'width 0.8s' }} />
+                        <div style={{ width: `${sentimentRates.Neutral}%`, background: '#94a3b8', transition: 'width 0.8s' }} />
+                        <div style={{ width: `${sentimentRates.Negative}%`, background: '#ef4444', transition: 'width 0.8s' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#16a34a' }}>{sentimentRates.Positive}%</div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pos</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>{sentimentRates.Neutral}%</div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Neu</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626' }}>{sentimentRates.Negative}%</div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Neg</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Card 4: subreddits */}
+                <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <TrendingUp size={16} color="#8b5cf6" />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>Coverage</span>
+                    </div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--foreground)' }}>{loading ? '…' : subreddits.length} Subreddits</div>
+                    <div style={{ fontSize: '11px', color: '#16a34a', marginTop: '4px', fontWeight: '600' }}>Full Sync</div>
                 </div>
             </div>
 
@@ -156,76 +185,71 @@ export default function EmotionPage() {
                                     ))}
                                 </tbody>
                             </table>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                INTENSITY
-                                <div style={{ width: '80px', height: '8px', borderRadius: '4px', background: 'linear-gradient(to right, #fce7f3, #ef4444)' }} />
-                                HIGH
-                            </div>
                         </div>
                     )}
                 </SectionCard>
 
-                <SectionCard title="Aggregate Emotion Fingerprint" subtitle="Overall emotional skew across all comments">
-                    <div style={{ height: '240px' }}>
+                <SectionCard title="Aggregate Emotion Fingerprint" subtitle="Overall emotional skew across all comments"
+                    action={<SlidersHorizontal size={16} color="var(--text-muted)" style={{ cursor: 'pointer' }} />}
+                >
+                    <div style={{ height: '340px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart data={radarData.length ? radarData : ALL_EMOTIONS.map(e => ({ emotion: e, value: 0 }))}>
+                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
                                 <PolarGrid stroke="#e2e8f0" />
-                                <PolarAngleAxis dataKey="emotion" tick={{ fontSize: 11, fill: '#64748b' }} />
-                                <Radar dataKey="value" stroke="#5b5ef4" fill="#5b5ef4" fillOpacity={0.15} strokeWidth={2} dot={{ r: 4, fill: '#5b5ef4' }} />
+                                <PolarAngleAxis dataKey="emotion" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 500 }} />
+                                <Radar
+                                    name="Intensity"
+                                    dataKey="value"
+                                    stroke="#5b5ef4"
+                                    strokeWidth={2}
+                                    fill="#5b5ef4"
+                                    fillOpacity={0.5}
+                                />
                             </RadarChart>
                         </ResponsiveContainer>
                     </div>
                 </SectionCard>
             </div>
 
-            {/* High Intensity Outliers */}
-            <SectionCard title="High Intensity Outliers" subtitle="Most positive and most negative comments in the dataset"
-                action={
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border)', borderRadius: '7px', padding: '6px 10px', background: 'white' }}>
-                            <Search size={13} color="var(--text-muted)" />
-                            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search comments..." style={{ border: 'none', outline: 'none', fontSize: '12.5px', color: 'var(--text-secondary)', width: '140px', background: 'transparent' }} />
-                        </div>
-                        <button style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '7px', background: 'white', cursor: 'pointer' }}>
-                            <SlidersHorizontal size={14} color="var(--text-muted)" />
-                        </button>
+            {/* Outliers */}
+            <SectionCard title="Emotional Outliers" subtitle="Detected comments with extreme emotional polarization">
+                <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <Search size={16} color="#94a3b8" />
+                        <input
+                            type="text"
+                            placeholder="Filter emotional outliers..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            style={{ flex: 1, border: 'none', background: 'transparent', fontSize: '13px', outline: 'none', color: 'var(--foreground)' }}
+                        />
                     </div>
-                }
-            >
-                {loading ? <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div> : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
-                        {filteredOutliers.length === 0 ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>No comments match your search.</div>
-                        ) : filteredOutliers.map((o, i) => {
-                            const isPos = o.score > 0;
-                            const emotionColor2 = isPos ? '#16a34a' : '#ef4444';
-                            const emotionBg = isPos ? '#dcfce7' : '#fee2e2';
-                            const avatarColor = isPos ? '#22c55e' : '#ef4444';
-                            return (
-                                <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'white', fontWeight: '700' }}>
-                                                {(o.author || 'u')[0].toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--foreground)' }}>{o.author}</span>
-                                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '6px' }}>{o.subreddit} · {o.created_time}</span>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '11.5px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', background: emotionBg, color: emotionColor2 }}>
-                                                {o.emotion}: {o.score >= 0 ? '+' : ''}{o.score.toFixed(2)}
-                                            </span>
-                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>VADER</span>
-                                        </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {filteredOutliers.map((item, i) => (
+                        <div key={i} style={{ padding: '14px', borderRadius: '12px', border: '1px solid var(--border)', background: 'white', transition: 'box-shadow 0.2s' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+                                        {emotionIcon[item.emotion_label] || '😐'}
                                     </div>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{o.comment}</p>
+                                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--foreground)' }}>u/{item.author || 'anonymous'}</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>in r/{item.subreddit}</span>
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
+                                <div style={{ fontSize: '11px', fontWeight: '600', color: (item.sentiment_score || 0) > 0 ? '#16a34a' : '#dc2626', background: (item.sentiment_score || 0) > 0 ? '#f0fdf4' : '#fff5f5', padding: '2px 8px', borderRadius: '4px' }}>
+                                    {(item.sentiment_score || 0).toFixed(2)} Score
+                                </div>
+                            </div>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item.comment}</p>
+                        </div>
+                    ))}
+                    {!filteredOutliers.length && (
+                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                            No emotional outliers match your search.
+                        </div>
+                    )}
+                </div>
             </SectionCard>
         </div>
     );

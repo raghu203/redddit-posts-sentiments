@@ -1,0 +1,21 @@
+post_id,subreddit,comment,sentiment_label,sentiment_score,created_time
+t1_abc001,r/technology,"This new AI is absolutely amazing! Best thing to happen to the industry.",Positive,0.87,2024-03-15 10:30:00
+t1_abc002,r/technology,"I hate how this technology is being misused. It's terrible.",Negative,-0.72,2024-03-15 11:00:00
+t1_abc003,r/technology,"Interesting development, though more peer review is needed.",Neutral,0.01,2024-03-15 11:45:00
+t1_abc004,r/science,"Fascinating study! The implications are incredible for future research.",Positive,0.91,2024-03-15 12:00:00
+t1_abc005,r/science,"This methodology has serious flaws. Very disappointing results.",Negative,-0.64,2024-03-15 12:30:00
+t1_abc006,r/science,"The paper presents standard findings with no major surprises.",Neutral,0.04,2024-03-15 13:00:00
+t1_abc007,r/worldnews,"Truly a dark day for humanity. This is frightening.",Negative,-0.85,2024-03-16 09:00:00
+t1_abc008,r/worldnews,"There is some hope in this situation. Progress is being made.",Positive,0.55,2024-03-16 10:00:00
+t1_abc009,r/worldnews,"The meeting concluded without any major announcements.",Neutral,-0.01,2024-03-16 11:00:00
+t1_abc010,r/Python,"Just deployed my first machine learning model! So proud!",Positive,0.95,2024-03-16 14:00:00
+t1_abc011,r/Python,"Spent 3 hours debugging a semicolon. Why do I do this to myself?",Negative,-0.40,2024-03-16 15:00:00
+t1_abc012,r/Python,"Updated the pandas version, migration was straightforward.",Neutral,0.05,2024-03-16 16:00:00
+t1_abc013,r/space,"The telescope images are breathtaking. Humanity's finest moment!",Positive,0.96,2024-03-17 08:00:00
+t1_abc014,r/space,"Budget cuts are killing our space program. Absolutely disgraceful.",Negative,-0.79,2024-03-17 09:00:00
+t1_abc015,r/space,"The rocket launch was delayed due to weather. Rescheduled for tomorrow.",Neutral,0.00,2024-03-17 10:00:00
+t1_abc016,r/technology,"Open source is the future and it's beautiful.",Positive,0.78,2024-03-17 14:00:00
+t1_abc017,r/technology,"Another data breach? This is completely unacceptable.",Negative,-0.68,2024-03-17 15:00:00
+t1_abc018,r/science,"Results from the trial were mixed — moderate efficacy observed.",Neutral,0.02,2024-03-18 09:30:00
+t1_abc019,r/worldnews,"The agreement is a major step forward. Brilliant diplomacy!",Positive,0.82,2024-03-18 10:00:00
+t1_abc020,r/Python,"Python 3.12 performance improvements are outstanding!",Positive,0.76,2024-03-18 11:00:00

@@ -28,7 +28,7 @@ export default function ExportPage() {
 
     // Auto-refresh preview every 30 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(loadPreview, 30000);
+        const stop = startAutoRefresh(loadPreview, 10000);
         return stop;
     }, [loadPreview]);
 

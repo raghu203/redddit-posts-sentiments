@@ -98,11 +98,49 @@ export const fetchStats = () =>
         average_sentiment: number;
     }>('/stats');
 
+export const uploadCSV = (file: File, onProgress?: (pct: number) => void) => {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append('file', file);
 
-// ─── Auto-refresh Hook (30s) ──────────────────────────────────────────────────
-// Usage in any page: const stop = startAutoRefresh(() => fetchData(), 30000);
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable && onProgress) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                onProgress(percentComplete);
+            }
+        });
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    resolve(JSON.parse(xhr.responseText));
+                } catch {
+                    reject(new Error('Invalid JSON response'));
+                }
+            } else {
+                reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+
+        xhr.open('POST', `${API_BASE}/api/upload-csv`);
+        xhr.send(formData);
+    });
+};
+
+export const clearData = () =>
+    fetch(`${API_BASE}/api/clear-data`, { method: 'POST' }).then(res => res.json());
+
+export const fetchUploadStatus = () =>
+    apiFetch<{ csv_loaded: boolean; meta: any }>('/api/upload-status');
+
+
+// ─── Auto-refresh Hook (10s) ──────────────────────────────────────────────────
+// Usage in any page: const stop = startAutoRefresh(() => fetchData(), 10000);
 // Call stop() in a cleanup function.
-export function startAutoRefresh(callback: () => void, intervalMs = 30000): () => void {
+export function startAutoRefresh(callback: () => void, intervalMs = 10000): () => void {
     const id = setInterval(callback, intervalMs);
     return () => clearInterval(id);
 }
