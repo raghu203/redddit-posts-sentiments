@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Reddit Alytics — Personal Sentiment Dashboard 📊
 
-## Getting Started
+This is the frontend application for the Reddit Sentiment Analysis project. Built with **Next.js 14**, it provides a modern, interactive dashboard to visualize public opinion trends across various subreddits.
 
-First, run the development server:
+## ✨ Features
 
+*   **Live Overview**: Instant KPIs including total volume and average sentiment scores.
+*   **Sentiment Deep Dive**: Distribution charts (Pie/Bar) for positive, neutral, and negative comments.
+*   **Emotion Radar**: Keyword-based emotional tone analysis (Joy, Anger, Fear, etc.).
+*   **Segment Analyzer**: Real-time analysis of custom pasted text blocks.
+*   **Comment Explorer**: A searchable, sortable database of individual Reddit comments.
+*   **Trend Tracking**: Historical sentiment graphs to track brand/topic perception over time.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure API Endpoint
+The frontend expects the backend to be running at `http://localhost:5000`. You can find the API configuration in:
+*   `app/overview/page.tsx`
+*   `app/sentiment/page.tsx`
+*   (and other page files)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📂 Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+*   `/app`: Contains all dashboard pages (Overview, Sentiment, Emotion, etc.).
+*   `/components`: Reusable UI components (Sidebar, Charts, Stat Cards).
+*   `/public`: Static assets and icons.
+*   `tailwind.config.ts`: Visual styling and theme configuration.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠 Tech Stack
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*   **Next.js 14**: React framework for the modern web.
+*   **TypeScript**: Static typing for robust code.
+*   **Tailwind CSS**: Utility-first styling for a premium look.
+*   **Recharts**: Composable charting library for data visualization.
+*   **Lucide React**: Beautifully simple icons.

@@ -7,22 +7,24 @@ import {
     Database,
     MessageSquare,
     Heart,
-    Cloud,
+    TrendingUp,
     BarChart2,
     Download,
     Settings,
-    Mail,
+    Search,
     List,
+    Zap,
 } from 'lucide-react';
 
 const mainNav = [
     { href: '/overview', label: 'Overview', icon: LayoutDashboard },
+    { href: '/text-analyzer', label: 'Text Analyzer', icon: Zap },
     { href: '/data-exploration', label: 'Data Sources', icon: Database },
     { href: '/sentiment', label: 'Sentiment Analysis', icon: MessageSquare },
     { href: '/emotion', label: 'Emotion Analysis', icon: Heart },
-    { href: '/trends', label: 'Word Cloud', icon: Cloud },
+    { href: '/trends', label: 'Temporal Trends', icon: TrendingUp },
     { href: '/engagement', label: 'Subreddit Comparison', icon: BarChart2 },
-    { href: '/messages', label: 'Messages', icon: Mail },
+    { href: '/messages', label: 'Comment Explorer', icon: Search },
     { href: '/threads', label: 'Reddit Threads', icon: List },
 ];
 

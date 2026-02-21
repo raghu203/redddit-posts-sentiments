@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowUp, MessageSquare, Share2, Bookmark, TrendingUp } from 'lucide-react';
-import { threads } from '@/lib/threadData';
 
-const subreddits = ['All', 'r/technology', 'r/science', 'r/space', 'r/worldnews', 'r/Python'];
+const API = 'http://localhost:5000';
 
 const sentimentStyle = (s: string) => {
     if (s === 'Positive') return { color: '#16a34a', bg: '#dcfce7' };
@@ -13,15 +11,40 @@ const sentimentStyle = (s: string) => {
     return { color: '#64748b', bg: '#f1f5f9' };
 };
 
-const formatUpvotes = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+const formatNum = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
 export default function ThreadsPage() {
     const [activeFilter, setActiveFilter] = useState('All');
-    const [sort, setSort] = useState<'Hot' | 'New' | 'Top'>('Hot');
+    const [sort, setSort] = useState<'hot' | 'new' | 'top'>('hot');
+    const [threads, setThreads] = useState<any[]>([]);
+    const [subreddits, setSubreddits] = useState<string[]>(['All']);
+    const [loading, setLoading] = useState(true);
+    const [total, setTotal] = useState(0);
 
-    const filtered = activeFilter === 'All'
-        ? threads
-        : threads.filter(t => t.subreddit === activeFilter);
+    const fetchThreads = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({ sort, per_page: '20' });
+            if (activeFilter !== 'All') params.append('subreddit', activeFilter);
+            const res = await fetch(`${API}/api/threads?${params}`);
+            const data = await res.json();
+            setThreads(data.threads || []);
+            setTotal(data.total || 0);
+
+            // Populate subreddit filter list once
+            if (subreddits.length <= 1) {
+                const subRes = await fetch(`${API}/api/subreddits`);
+                const subData = await subRes.json();
+                setSubreddits(['All', ...(subData.subreddits || []).map((s: any) => s.name)]);
+            }
+        } catch {
+            setThreads([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [sort, activeFilter]);
+
+    useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
     return (
         <div style={{ padding: '24px 28px', minHeight: '100vh', maxWidth: '900px', margin: '0 auto' }}>
@@ -29,17 +52,20 @@ export default function ThreadsPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div>
                     <h1 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--foreground)', marginBottom: '2px' }}>Reddit Threads</h1>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Browse and analyze scraped Reddit posts with sentiment insights</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                        Browse {total} posts with live sentiment — grouped by thread
+                    </p>
                 </div>
                 <div style={{ display: 'flex', gap: '4px' }}>
-                    {(['Hot', 'New', 'Top'] as const).map(s => (
+                    {(['hot', 'new', 'top'] as const).map(s => (
                         <button key={s} onClick={() => setSort(s)} style={{
                             padding: '6px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '500',
                             border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                             background: sort === s ? '#5b5ef4' : '#f1f5f9',
                             color: sort === s ? 'white' : 'var(--text-secondary)',
+                            textTransform: 'capitalize',
                         }}>
-                            {s === 'Hot' ? '🔥' : s === 'New' ? '✨' : '⬆️'} {s}
+                            {s === 'hot' ? '🔥' : s === 'new' ? '✨' : '⬆️'} {s.charAt(0).toUpperCase() + s.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -61,18 +87,22 @@ export default function ThreadsPage() {
             </div>
 
             {/* Thread List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {filtered.map(thread => {
-                    const ss = sentimentStyle(thread.sentiment);
-                    return (
-                        <Link key={thread.id} href={`/threads/${thread.id}`} style={{ textDecoration: 'none' }}>
-                            <div style={{
-                                background: 'white',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border)',
-                                overflow: 'hidden',
-                                transition: 'all 0.18s ease',
-                                cursor: 'pointer',
+            {loading ? (
+                <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    Loading threads…
+                </div>
+            ) : threads.length === 0 ? (
+                <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    No threads found for this filter.
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {threads.map(thread => {
+                        const ss = sentimentStyle(thread.sentiment);
+                        return (
+                            <div key={thread.id} style={{
+                                background: 'white', borderRadius: '12px', border: '1px solid var(--border)',
+                                overflow: 'hidden', transition: 'all 0.18s ease', cursor: 'pointer',
                             }}
                                 onMouseEnter={e => {
                                     (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(91,94,244,0.12)';
@@ -85,17 +115,16 @@ export default function ThreadsPage() {
                                     (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
                                 }}
                             >
-                                {/* Vote Sidebar + Content */}
                                 <div style={{ display: 'flex' }}>
                                     {/* Upvote Column */}
                                     <div style={{
                                         width: '56px', background: '#f8fafc', display: 'flex', flexDirection: 'column',
-                                        alignItems: 'center', justifyContent: 'flex-start', padding: '16px 0', gap: '4px', flexShrink: 0,
-                                        borderRight: '1px solid #f1f5f9'
+                                        alignItems: 'center', justifyContent: 'flex-start', padding: '16px 0', gap: '4px',
+                                        flexShrink: 0, borderRight: '1px solid #f1f5f9',
                                     }}>
                                         <ArrowUp size={18} color="#5b5ef4" />
                                         <span style={{ fontSize: '12px', fontWeight: '700', color: '#5b5ef4' }}>
-                                            {formatUpvotes(thread.upvotes)}
+                                            {formatNum(thread.upvotes)}
                                         </span>
                                     </div>
 
@@ -103,23 +132,16 @@ export default function ThreadsPage() {
                                     <div style={{ padding: '14px 18px', flex: 1 }}>
                                         {/* Meta */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                                            <span style={{
-                                                fontSize: '11px', fontWeight: '700', color: 'white',
-                                                background: '#5b5ef4', padding: '2px 8px', borderRadius: '6px',
-                                            }}>{thread.subreddit}</span>
-                                            {thread.flair && (
-                                                <span style={{
-                                                    fontSize: '10.5px', fontWeight: '600', padding: '1px 8px',
-                                                    borderRadius: '10px', background: ss.bg, color: ss.color,
-                                                }}>{thread.flair}</span>
-                                            )}
+                                            <span style={{ fontSize: '11px', fontWeight: '700', color: 'white', background: '#5b5ef4', padding: '2px 8px', borderRadius: '6px' }}>
+                                                {thread.subreddit}
+                                            </span>
                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                Posted by <strong style={{ color: 'var(--text-secondary)' }}>{thread.author}</strong> · {thread.time}
+                                                Posted by <strong style={{ color: 'var(--text-secondary)' }}>u/{thread.author}</strong> · {thread.time}
                                             </span>
                                             <span style={{
                                                 marginLeft: 'auto', fontSize: '10px', fontWeight: '700',
                                                 padding: '2px 8px', borderRadius: '10px', background: ss.bg, color: ss.color,
-                                                textTransform: 'uppercase', letterSpacing: '0.04em'
+                                                textTransform: 'uppercase', letterSpacing: '0.04em',
                                             }}>{thread.sentiment}</span>
                                         </div>
 
@@ -128,21 +150,21 @@ export default function ThreadsPage() {
                                             {thread.title}
                                         </h2>
 
-                                        {/* Body preview */}
-                                        <p style={{
-                                            fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.55', marginBottom: '12px',
-                                            overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any
-                                        }}>
-                                            {thread.body}
-                                        </p>
+                                        {/* Score bar */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                            <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>Sentiment Score:</span>
+                                            <span style={{ fontSize: '13px', fontWeight: '700', color: thread.score >= 0.05 ? '#16a34a' : thread.score <= -0.05 ? '#ef4444' : '#64748b' }}>
+                                                {thread.score >= 0 ? '+' : ''}{thread.score.toFixed(3)}
+                                            </span>
+                                        </div>
 
                                         {/* Actions */}
                                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>
-                                                <MessageSquare size={13} /> {thread.comments.toLocaleString()} comments
+                                                <MessageSquare size={13} /> {thread.comments} comments
                                             </span>
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>
-                                                <Share2 size={13} /> Share
+                                                <TrendingUp size={13} /> Score: {thread.score >= 0 ? '+' : ''}{thread.score.toFixed(2)}
                                             </span>
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '500' }}>
                                                 <Bookmark size={13} /> Save
@@ -151,10 +173,10 @@ export default function ThreadsPage() {
                                     </div>
                                 </div>
                             </div>
-                        </Link>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

@@ -1,45 +1,56 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Download, Plus, RefreshCw } from 'lucide-react';
 import SectionCard from '@/components/ui/SectionCard';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
 
-const trendData = [
-    { date: "Jan '23", joy: 0.38, fear: 0.05, anger: 0.02, neutral: 0.3 },
-    { date: "Mar '23", joy: 0.42, fear: 0.08, anger: 0.03, neutral: 0.28 },
-    { date: "May '23", joy: 0.45, fear: 0.15, anger: 0.04, neutral: 0.25 },
-    { date: "Jul '23", joy: 0.40, fear: 0.35, anger: 0.06, neutral: 0.22 },
-    { date: "Sep '23", joy: 0.38, fear: 0.55, anger: 0.08, neutral: 0.20 },
-    { date: "Nov '23", joy: 0.42, fear: 0.82, anger: 0.12, neutral: 0.18 },
-    { date: "Jan '24", joy: 0.50, fear: 0.78, anger: 0.10, neutral: 0.22 },
-];
-
-const volatilityData = [
-    { week: 'W1', v: 0.2 }, { week: 'W2', v: 0.35 }, { week: 'W3', v: 0.28 },
-    { week: 'W4', v: 0.45 }, { week: 'W5', v: 0.38 }, { week: 'W6', v: 0.52 },
-    { week: 'W7', v: 0.48 }, { week: 'W8', v: 0.60 },
-];
+const API = 'http://localhost:5000';
 
 const timelineEvents = [
-    { date: 'Nov 17, 2023', title: 'CEO Ouster News', desc: 'Sudden leadership change triggered massive spike in "Surprise" and "Fear".', tags: ['OpenAI', 'Sam Altman'], active: true },
-    { date: 'Oct 30, 2023', title: 'Executive Order on AI', desc: 'White House announcement. Mixed sentiment: Relief vs. stifle concerns.', tags: [] },
-    { date: 'July 20, 2023', title: 'Senate Hearings', desc: 'Congressional testimony creates sustained "Anxiety" plateau.', tags: [] },
-    { date: 'Mar 14, 2023', title: 'GPT-4 Release', desc: 'Dominant "Joy" and "Anticipation" metrics. Peak engagement volume.', tags: [] },
-    { date: 'Feb 07, 2023', title: 'Bing Chat Demo', desc: 'Initial excitement followed by "Confusion" clusters.', tags: [] },
-];
-
-const statCards = [
-    { label: 'DOMINANT AFFECT', value: 'Anticipation', sub: 'Highest sustained volume over Q3.', badge: 'Steady', badgeColor: '#16a34a', badgeBg: '#dcfce7', extra: '↑12%' },
-    { label: 'PEAK VOLATILITY', value: 'Nov 14-21', sub: "Correlates with 'OpenAI Leadership' event.", badge: 'Critical', badgeColor: '#dc2626', badgeBg: '#fee2e2' },
-    { label: 'SAMPLE VOLUME', value: '842.1k', sub: 'comments', bar: true },
-    { label: 'TREND SIGNAL', value: 'Polarizing', sub: "Divergence between 'Joy' and 'Fear' widening." },
+    { date: 'Jan 02, 2024', title: 'Data Collection Start', desc: 'Began collecting sentiment data across multiple subreddits.', tags: ['Start'], active: true },
+    { date: 'Jan 05, 2024', title: 'Positive Sentiment Peak', desc: 'Notable spike in positive comments, driven by r/space posts.', tags: ['r/space'] },
+    { date: 'Jan 08, 2024', title: 'Negative Trend Observed', desc: 'Increased negativity in r/worldnews and r/technology threads.', tags: ['r/worldnews', 'r/technology'] },
+    { date: 'Jan 12, 2024', title: 'Neutral Plateau', desc: 'Neutral comments dominate across all subreddits.', tags: [] },
 ];
 
 export default function TrendsPage() {
-    const [view, setView] = useState<'Daily' | 'Weekly' | 'Monthly'>('Weekly');
+    const [view, setView] = useState<'Daily' | 'Weekly' | 'Monthly'>('Daily');
+    const [trendData, setTrendData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch(`${API}/api/trends`)
+            .then(r => r.json())
+            .then(data => {
+                const raw = data.trends || [];
+                setTrendData(raw.map((t: any) => ({
+                    date: t.date,
+                    positive: t.positive,
+                    neutral: t.neutral,
+                    negative: t.negative,
+                    total: t.total,
+                })));
+            })
+            .catch(() => { })
+            .finally(() => setLoading(false));
+    }, []);
+
+    // Compute stat cards from actual data
+    const peakDay = trendData.reduce((best, d) => d.total > (best?.total || 0) ? d : best, null as any);
+    const avgScore = trendData.length > 0
+        ? trendData.reduce((s, d) => s + (d.positive - d.negative), 0) / trendData.length
+        : 0;
+    const dominantSentiment = avgScore > 0.3 ? 'Positive' : avgScore < -0.3 ? 'Negative' : 'Mixed/Neutral';
+
+    const statCards = [
+        { label: 'DOMINANT SENTIMENT', value: dominantSentiment, sub: `Avg net score: ${avgScore.toFixed(2)}`, badge: avgScore > 0 ? 'Positive' : 'Negative', badgeColor: avgScore > 0 ? '#16a34a' : '#dc2626', badgeBg: avgScore > 0 ? '#dcfce7' : '#fee2e2', extra: avgScore > 0 ? '↑' : '↓' },
+        { label: 'PEAK DAY', value: peakDay?.date || '—', sub: `${peakDay?.total || 0} comments on peak day`, badge: 'Most Active', badgeColor: '#dc2626', badgeBg: '#fee2e2' },
+        { label: 'TOTAL COMMENTS', value: String(trendData.reduce((s, d) => s + d.total, 0)), sub: 'across all tracked dates', bar: true },
+        { label: 'DAYS TRACKED', value: String(trendData.length), sub: `${trendData[0]?.date || '—'} to ${trendData.at(-1)?.date || '—'}` },
+    ];
 
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -99,7 +110,7 @@ export default function TrendsPage() {
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
-                                    {[{ id: 'joyGrad', color: '#3b82f6' }, { id: 'fearGrad', color: '#a855f7' }, { id: 'angerGrad', color: '#ef4444' }].map(g => (
+                                    {[{ id: 'posGrad', color: '#22c55e' }, { id: 'neuGrad', color: '#94a3b8' }, { id: 'negGrad', color: '#ef4444' }].map(g => (
                                         <linearGradient key={g.id} id={g.id} x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor={g.color} stopOpacity={0.2} />
                                             <stop offset="95%" stopColor={g.color} stopOpacity={0} />
@@ -108,17 +119,16 @@ export default function TrendsPage() {
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <YAxis domain={[0, 1]} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                <Tooltip />
-                                <Area type="monotone" dataKey="joy" stroke="#3b82f6" strokeWidth={2.5} fill="url(#joyGrad)" dot={false} name="Joy / Anticipation" />
-                                <Area type="monotone" dataKey="fear" stroke="#a855f7" strokeWidth={2.5} fill="url(#fearGrad)" dot={false} name="Fear / Anxiety" />
-                                <Area type="monotone" dataKey="anger" stroke="#ef4444" strokeWidth={2} fill="url(#angerGrad)" dot={false} strokeDasharray="6 3" name="Anger" />
-                                <Area type="monotone" dataKey="neutral" stroke="#94a3b8" strokeWidth={1.5} fill="none" dot={false} name="Neutral" />
+                                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                <Tooltip formatter={(v: any, name: any) => [`${v} comments`, name]} />
+                                <Area type="monotone" dataKey="positive" stroke="#22c55e" strokeWidth={2.5} fill="url(#posGrad)" dot={false} name="Positive" />
+                                <Area type="monotone" dataKey="neutral" stroke="#94a3b8" strokeWidth={1.5} fill="url(#neuGrad)" dot={false} name="Neutral" />
+                                <Area type="monotone" dataKey="negative" stroke="#ef4444" strokeWidth={2} fill="url(#negGrad)" dot={false} name="Negative" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                     <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '10px' }}>
-                        {[{ c: '#3b82f6', l: 'Joy / Anticipation' }, { c: '#a855f7', l: 'Fear / Anxiety' }, { c: '#ef4444', l: 'Anger' }, { c: '#94a3b8', l: 'Neutral' }].map(s => (
+                        {[{ c: '#3b82f6', l: 'Positive' }, { c: '#94a3b8', l: 'Neutral' }, { c: '#ef4444', l: 'Negative' }].map(s => (
                             <span key={s.l} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                                 <span style={{ width: '20px', height: '3px', background: s.c, display: 'inline-block', borderRadius: '2px' }} />{s.l}
                             </span>
@@ -128,15 +138,15 @@ export default function TrendsPage() {
 
                 {/* Bottom Row */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <SectionCard title="Sentiment Volatility Index">
+                    <SectionCard title="Daily Sentiment Balance (Positive − Negative)">
                         <div style={{ height: '120px' }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={volatilityData} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
-                                    <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                                <BarChart data={trendData} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
+                                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                                    <Bar dataKey="v" radius={[3, 3, 0, 0]}>
-                                        {volatilityData.map((e, i) => <Cell key={i} fill={e.v > 0.5 ? '#5b5ef4' : '#bfdbfe'} />)}
-                                    </Bar>
+                                    <Tooltip formatter={(v: any) => [`${v} comments`, '']} />
+                                    <Bar dataKey="positive" fill="#22c55e" radius={[3, 3, 0, 0]} name="Positive" stackId="a" />
+                                    <Bar dataKey="negative" fill="#ef4444" radius={[0, 0, 3, 3]} name="Negative" stackId="a" />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
