@@ -35,9 +35,9 @@ export default function TrendsPage() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    // Auto-refresh every 10 seconds
+    // Auto-refresh every 5 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(loadData, 10000);
+        const stop = startAutoRefresh(loadData, 5000);
         return stop;
     }, [loadData]);
 

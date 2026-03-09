@@ -62,9 +62,9 @@ export default function CommentExplorerPage() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    // Auto-refresh every 10 seconds
+    // Auto-refresh every 5 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(() => fetchData(), 10000);
+        const stop = startAutoRefresh(() => fetchData(), 5000);
         return stop;
     }, [fetchData]);
 

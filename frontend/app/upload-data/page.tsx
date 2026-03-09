@@ -30,6 +30,7 @@ export default function UploadDataPage() {
     const [clearing, setClearing] = useState(false);
     const [showSuccessCheck, setShowSuccessCheck] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [currentRowLog, setCurrentRowLog] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
 
     // Check current upload status on mount
@@ -57,15 +58,42 @@ export default function UploadDataPage() {
         setMessage('');
         setShowSuccessCheck(false);
         setUploadProgress(0);
+        setCurrentRowLog('Reading file structure...');
 
         try {
-            const data: any = await uploadCSV(file, (pct) => {
-                setUploadProgress(pct);
-            });
+            // Extract text for a simulated parsing effect
+            let text = '';
+            try { text = await file.text(); } catch (e) { }
+            const lines = text ? text.split('\n').filter(l => l.trim()) : [];
+            const totalLines = Math.max(0, lines.length - 1);
+
+            // Start actual upload
+            const uploadPromise = uploadCSV(file);
+
+            // Run UI animation to simulate row-by-row processing
+            const animationDuration = 3000;
+            const steps = 40;
+            const stepTime = animationDuration / steps;
+
+            for (let i = 1; i <= steps; i++) {
+                await new Promise(r => setTimeout(r, stepTime));
+                setUploadProgress(Math.floor((i / steps) * 99));
+
+                if (totalLines > 0) {
+                    const rowIdx = Math.floor((i / steps) * totalLines) + 1; // skip header
+                    const rowPreview = lines[Math.min(rowIdx, lines.length - 1)]?.substring(0, 40) || '...';
+                    setCurrentRowLog(`Row ${rowIdx}/${totalLines}: ${rowPreview}...`);
+                } else {
+                    setCurrentRowLog(`Processing data packet ${i}/${steps}...`);
+                }
+            }
+
+            const data: any = await uploadPromise;
 
             if (data.ok) {
-                // Once upload is 100%, we stay in "Analyzing" mode briefly
+                // Wait a moment at 99% before showing success
                 setUploadProgress(100);
+                setCurrentRowLog('Finalizing data insertion...');
                 setTimeout(() => {
                     setShowSuccessCheck(true);
                     setTimeout(() => {
@@ -265,8 +293,8 @@ export default function UploadDataPage() {
                                         }} />
                                     )}
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '14px', fontWeight: '500' }}>
-                                    {uploadProgress < 100 ? `Transferring data packets...` : `Finalizing sentiment mappings...`}
+                                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '14px', fontWeight: '500', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>
+                                    {uploadProgress < 100 ? currentRowLog : 'Finalizing sentiment mappings...'}
                                 </div>
                             </>
                         )}

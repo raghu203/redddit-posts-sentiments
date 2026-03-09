@@ -45,9 +45,9 @@ export default function ThreadsPage() {
 
     useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
-    // Auto-refresh every 10 seconds
+    // Auto-refresh every 5 seconds
     useEffect(() => {
-        const stop = startAutoRefresh(fetchThreads, 10000);
+        const stop = startAutoRefresh(fetchThreads, 5000);
         return stop;
     }, [fetchThreads]);
 

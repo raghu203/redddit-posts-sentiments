@@ -119,21 +119,28 @@ def _generate_synthetic_data() -> int:
     """Generate realistic fake posts to simulate a live Reddit stream."""
     print("[sim] Generating mock data batch...")
     topics = {
-        "Python":     ["New PEP 750 released!", "Why Python is still #1 in AI", "Scraping with Playwright 2026", "Mojo vs Python performance"],
-        "technology": ["Nvidia CEO announces H200", "Apple Vision Pro 3 leaks", "Solid-state batteries are here", "The AI bubble debate"],
-        "science":    ["New exoplanet found", "Fusion energy milestone", "Ancient DNA sequence", "Ocean cooling anomaly"],
+        "Python":     ["New PEP 750 released!", "Why Python is still #1 in AI", "Scraping with Playwright 2026", "Mojo vs Python performance", "Django 5.0 is out!"],
+        "technology": ["Nvidia CEO announces H200", "Apple Vision Pro 3 leaks", "Solid-state batteries are here", "The AI bubble debate", "Waymo expands to NYC"],
+        "science":    ["New exoplanet found", "Fusion energy milestone", "Ancient DNA sequence", "Ocean cooling anomaly", "CRISPR breakthrough"],
+        "news":       ["Global market rally", "Election results update", "Inflation drops to 2%", "New climate accord signed", "Tech stocks soar"],
+        "gaming":     ["GTA VI trailer analysis", "Elden Ring DLC announced", "Steam concurrent user record", "PS5 Pro specs leaked", "Indie game goes viral"]
     }
 
     inserted = 0
-    for sub, titles in topics.items():
-        for title in random.sample(titles, 2):
+    # Pick 2-4 random subreddits each cycle
+    active_subs = random.sample(list(topics.keys()), random.randint(2, 4))
+    
+    for sub in active_subs:
+        titles = topics[sub]
+        # Pick 2-5 random threads per active sub
+        for title in random.sample(titles, random.randint(2, min(5, len(titles)))):
             print(f"   [sim] Creating: {title[:50]}...")
             ok = _process_and_insert(
                 p_id=f"synth_{random.randint(100000, 999999)}",
                 sub=f"r/{sub}",
                 title=title,
                 author=f"u/tester_{random.randint(1, 999)}",
-                upvotes=random.randint(50, 5000),
+                upvotes=random.randint(10, 5000),
                 created_utc=datetime.now().timestamp(),
             )
             if ok: inserted += 1

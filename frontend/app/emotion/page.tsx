@@ -52,7 +52,7 @@ export default function EmotionPage() {
     useEffect(() => { loadData(); }, [loadData]);
 
     useEffect(() => {
-        const stop = startAutoRefresh(loadData, 10000);
+        const stop = startAutoRefresh(loadData, 5000);
         return stop;
     }, [loadData]);
 

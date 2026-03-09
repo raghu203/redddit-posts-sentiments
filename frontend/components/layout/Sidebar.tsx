@@ -15,10 +15,12 @@ import {
     List,
     Zap,
     Upload,
+    Radio
 } from 'lucide-react';
 
 const mainNav = [
     { href: '/overview', label: 'Overview', icon: LayoutDashboard },
+    { href: '/live', label: 'Live Stream', icon: Radio },
     { href: '/upload-data', label: 'Upload Data', icon: Upload },
     { href: '/text-analyzer', label: 'Text Analyzer', icon: Zap },
     { href: '/data-exploration', label: 'Data Sources', icon: Database },
@@ -55,8 +57,8 @@ export default function Sidebar() {
                 transition: 'all 0.15s ease',
                 marginBottom: '2px',
             }}
-                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = '#f8f9fc'; } }}
-                onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; } }}
+                onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = '#f8f9fc'; } }}
+                onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; } }}
             >
                 <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
                 {label}

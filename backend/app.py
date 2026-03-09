@@ -156,16 +156,14 @@ def overview():
     df = get_df()
 
     if df is None:
-        db_posts = get_all_posts(limit=2000)
-        if not db_posts:
-            return jsonify({
-                'total_comments': 0, 'total_subreddits': 0,
-                'avg_sentiment_score': 0,
-                'sentiment_counts': {'Positive': 0, 'Neutral': 0, 'Negative': 0},
-                'most_active_subreddit': 'N/A'
-            })
-        df = pd.DataFrame(db_posts)
-        df = df.rename(columns={'sentiment_label': 'sentiment_label', 'sentiment_score': 'sentiment_score'})
+        return jsonify({
+            'total_comments': 0, 'total_subreddits': 0,
+            'avg_sentiment_score': 0,
+            'sentiment_counts': {'Positive': 0, 'Neutral': 0, 'Negative': 0},
+            'most_active_subreddit': 'N/A',
+            'most_positive_subreddit': 'N/A',
+            'most_negative_subreddit': 'N/A'
+        })
 
     counts = df['sentiment_label'].value_counts().to_dict()
     return jsonify({
@@ -186,12 +184,9 @@ def sentiment():
     df = get_df()
 
     if df is None:
-        db_posts = get_all_posts(limit=2000)
-        if not db_posts:
-            return jsonify({'total': 0, 'counts': {'Positive': 0, 'Neutral': 0, 'Negative': 0},
-                            'percentages': {'Positive': 0, 'Neutral': 0, 'Negative': 0}, 'avg_score': 0,
-                            'distribution': []})
-        df = pd.DataFrame(db_posts)
+        return jsonify({'total': 0, 'counts': {'Positive': 0, 'Neutral': 0, 'Negative': 0},
+                        'percentages': {'Positive': 0, 'Neutral': 0, 'Negative': 0}, 'avg_score': 0,
+                        'distribution': []})
 
     total = len(df)
     if total == 0:
@@ -229,9 +224,7 @@ def subreddits():
     df = get_df()
 
     if df is None:
-        db_posts = get_all_posts(limit=2000)
-        if not db_posts: return jsonify({'subreddits': []})
-        df = pd.DataFrame(db_posts)
+        return jsonify({'subreddits': []})
 
     result = []
     total_all = len(df)
@@ -269,24 +262,8 @@ def comments():
     sort_dir = request.args.get('sort_dir', 'desc')
 
     if df is None:
-        db_posts = get_all_posts(limit=500)
-        if not db_posts:
-            return jsonify({'total': 0, 'page': 1, 'per_page': per_page, 'total_pages': 1, 'comments': [],
-                            'counts': {'Positive': 0, 'Neutral': 0, 'Negative': 0, 'total': 0}})
-        rows = []
-        for row in db_posts:
-            rows.append({
-                'post_id': row.get('id', ''),
-                'comment': row.get('title', row.get('comment', '')),
-                'sentiment': row.get('sentiment_label', ''),
-                'score': row.get('sentiment_score', 0),
-                'subreddit': row.get('subreddit', ''),
-                'author': row.get('author', ''),
-                'upvotes': row.get('upvotes', 0),
-                'created_time': row.get('created_time', '')
-            })
-        df = pd.DataFrame(rows)
-        df = df.rename(columns={'sentiment': 'sentiment_label', 'score': 'sentiment_score'})
+        return jsonify({'total': 0, 'page': page, 'per_page': per_page, 'total_pages': 1, 'comments': [],
+                        'counts': {'Positive': 0, 'Neutral': 0, 'Negative': 0, 'total': 0}})
     else:
         # Normalize for CSV mode
         df = df.copy()
@@ -348,9 +325,7 @@ def trends():
     df = get_df()
 
     if df is None:
-        db_posts = get_all_posts(limit=2000)
-        if not db_posts: return jsonify({'trends': []})
-        df = pd.DataFrame(db_posts)
+        return jsonify({'trends': []})
 
     if df.empty:
         return jsonify({'trends': []})
@@ -383,10 +358,7 @@ def emotions():
     df = get_df()
 
     if df is None:
-        db_posts = get_all_posts(limit=2000)
-        if not db_posts:
-            return jsonify({'radar': [], 'heatmap': {}, 'outliers': []})
-        df = pd.DataFrame(db_posts)
+        return jsonify({'radar': [], 'heatmap': {}, 'outliers': []})
 
     if df.empty:
         return jsonify({'radar': [], 'heatmap': {}, 'outliers': []})
@@ -460,12 +432,7 @@ def threads():
     df = get_df()
 
     if df is None:
-        db_posts = get_all_posts(limit=500)
-        if not db_posts: return jsonify({'total': 0, 'threads': []})
-        df = pd.DataFrame(db_posts)
-        df = df.rename(columns={'id': 'post_id', 'title': 'comment',
-                                'sentiment_label': 'sentiment_label',
-                                'sentiment_score': 'sentiment_score'})
+        return jsonify({'total': 0, 'threads': []})
 
     if df.empty:
         return jsonify({'total': 0, 'threads': []})

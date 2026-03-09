@@ -84,6 +84,7 @@ export const fetchStatus = () =>
         sync_interval_seconds: number;
         cycle_count: number;
         error: string | null;
+        csv_loaded: boolean;
     }>('/api/status');
 
 export const fetchPosts = () =>
@@ -137,10 +138,10 @@ export const fetchUploadStatus = () =>
     apiFetch<{ csv_loaded: boolean; meta: any }>('/api/upload-status');
 
 
-// ─── Auto-refresh Hook (10s) ──────────────────────────────────────────────────
-// Usage in any page: const stop = startAutoRefresh(() => fetchData(), 10000);
+// ─── Auto-refresh Hook (5s) ──────────────────────────────────────────────────
+// Usage in any page: const stop = startAutoRefresh(() => fetchData(), 5000);
 // Call stop() in a cleanup function.
-export function startAutoRefresh(callback: () => void, intervalMs = 10000): () => void {
+export function startAutoRefresh(callback: () => void, intervalMs = 5000): () => void {
     const id = setInterval(callback, intervalMs);
     return () => clearInterval(id);
 }
